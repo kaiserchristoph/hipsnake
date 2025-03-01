@@ -4,6 +4,10 @@
 #include <algorithm> // Für std::find
 #include "bitmap.h"
 #include "Button2.h"
+#include <ArduinoJson.h>
+#include <FS.h>
+#include <SPIFFS.h>
+
 
 #define LED_PIN     25
 #define NUM_LEDS    256
@@ -152,9 +156,71 @@ void wait_for_serial_connection() {
   
 }
 
+// Function to draw a character from the JSON file onto the LED matrix
+void drawChar(char c, int xStart, int yStart, CRGB color) {
+  // Load the JSON file
+  File file = SPIFFS.open("/slumbers.json", "r");
+  if (!file) {
+    Serial.println("Failed to open file");
+    return;
+  }
+
+  // Allocate a temporary buffer to store the JSON data
+  size_t size = file.size();
+  std::unique_ptr<char[]> buf(new char[size]);
+
+  // Read the file into the buffer
+  file.readBytes(buf.get(), size);
+
+  // Parse the JSON data
+  DynamicJsonDocument doc(2048);
+  DeserializationError error = deserializeJson(doc, buf.get());
+  if (error) {
+    Serial.println("Failed to parse JSON");
+    return;
+  }
+
+  // Get the character's pixel data
+  JsonObject glyph = doc["glyphs"][String(c)];
+  if (glyph.isNull()) {
+    Serial.println("Character not found in JSON");
+    return;
+  }
+
+  JsonArray pixels = glyph["pixels"];
+  int offsetX = glyph["offset"];
+
+  // Clear the LED matrix
+  //FastLED.clear();
+
+  // Draw the character's pixels onto the LED matrix
+  for (int y = 0; y < pixels.size(); y++) {
+    JsonArray row = pixels[y];
+    for (int x = 0; x < row.size(); x++) {
+      if (row[x] == 1) {
+        leds[XY(x+xStart + offsetX, pixels.size()-y+yStart-1)] = color;
+      }
+    }
+  }
+
+  // Show the updated LED matrix
+  //FastLED.show();
+}
+
+void drawString(String s, int xStart, int yStart, CRGB color) {
+  for (int i = 0; i < s.length(); i++) {
+    drawChar(s[i], xStart + i * 4, yStart, color);
+  }
+}
+
 void setup() {
   Serial.begin(115200);
-  wait_for_serial_connection(); // Optional, but seems to help Teensy out a lot.
+  if(!SPIFFS.begin(true)){
+    Serial.println("An Error has occurred while mounting SPIFFS");
+    return;
+  }
+
+  button_left.begin(LEFT_PIN);
 
   button_left.begin(LEFT_PIN);
   button_right.begin(RIGHT_PIN);
@@ -167,13 +233,19 @@ void setup() {
   FastLED.setBrightness(BRIGHTNESS);
   
   Food = {8, 3};
+
   // Zeichne das Logo
   //show_logo();
   //delay(10000);
   
   // Zeichne die Schlange
   draw();
+
+
 }
+
+//load json file
+
 
 void loop() {
   static unsigned long lastMoveTime = 0;
@@ -183,10 +255,18 @@ void loop() {
     lastMoveTime = currentTime;
     boolean weiter = move_snake();
     if (!weiter) {
-      // Behandle das Ende des Spiels oder die Kollision
       leds[XY(Snake[0].first, Snake[0].second)] = CRGB::Red;
       FastLED.show();
-      delay(300);
+      delay(1000);
+      FastLED.clear();
+      drawString("GAME", 0, 8, CRGB::Red);
+      drawString("OVER", 0, 2, CRGB::Red);
+      FastLED.show();
+      delay(4000);
+      FastLED.clear();
+      drawString(String(Snake.size()-3)+"P", 1, 8, CRGB::Red);
+      FastLED.show();
+      delay(4000);
       show_logo();
       delay(3000);
       vy = 0;
