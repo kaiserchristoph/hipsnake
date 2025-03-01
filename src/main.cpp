@@ -3,8 +3,9 @@
 #include <vector>
 #include <algorithm> // Für std::find
 #include "bitmap.h"
+#include "Button2.h"
 
-#define LED_PIN     2
+#define LED_PIN     25
 #define NUM_LEDS    256
 #define BRIGHTNESS  255
 #define LED_TYPE    WS2812
@@ -19,11 +20,56 @@ const uint8_t kMatrixHeight = 16;
 const bool    kMatrixSerpentineLayout = true;
 const bool    kMatrixVertical = false;
 
-std::vector<std::pair<int, int>> Snake = {{2, 3}, {1, 3}, {0, 3}};
-std::pair<int, int> Food;
+#define LEFT_PIN 33 // GPIO21 pin connected to button
+#define RIGHT_PIN 32 // GPIO22 pin connected to button
+
+Button2 button_left;
+Button2 button_right;
 
 int vx = 1;
 int vy = 0;
+
+/////////////////////////////////////////////////////////////////
+
+void tap_left(Button2& btn) {
+    //Serial.println("tap left");
+    if (vy == 1) {
+        vx = -1;
+        vy = 0;
+    } else if (vy == -1) {
+        vx = 1;
+        vy = 0;
+    } else if (vx == 1) {
+        vx = 0;
+        vy = 1;
+    } else if (vx == -1) {
+        vx = 0;
+        vy = -1;
+    }
+}
+
+void tap_right(Button2& btn) {
+    //Serial.println("tap right");
+    if (vy == 1) {
+        vx = 1;
+        vy = 0;
+    } else if (vy == -1) {
+        vx = -1;
+        vy = 0;
+    } else if (vx == 1) {
+        vx = 0;
+        vy = -1;
+    } else if (vx == -1) {
+        vx = 0;
+        vy = 1;
+    }
+}
+
+/////////////////////////////////////////////////////////////////
+
+std::vector<std::pair<int, int>> Snake = {{2, 3}, {1, 3}, {0, 3}};
+std::pair<int, int> Food;
+
 
 
 uint16_t XY( uint8_t x, uint8_t y) {
@@ -79,8 +125,6 @@ boolean move_snake() {
       int fx = random(0, kMatrixWidth);
       int fy = random(0, kMatrixHeight);
       Food = {fx, fy};
-      vx = 0;
-      vy = 1;
     } else
   Snake.pop_back();
   return true;
@@ -111,6 +155,14 @@ void wait_for_serial_connection() {
 void setup() {
   Serial.begin(115200);
   wait_for_serial_connection(); // Optional, but seems to help Teensy out a lot.
+
+  button_left.begin(LEFT_PIN);
+  button_right.begin(RIGHT_PIN);
+
+  // setTapHandler() is called by any type of click, longpress or shortpress
+  button_left.setTapHandler(tap_left);
+  button_right.setTapHandler(tap_right);
+
   FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
   FastLED.setBrightness(BRIGHTNESS);
   
@@ -124,19 +176,27 @@ void setup() {
 }
 
 void loop() {
-  boolean weiter = move_snake();
-  if (!weiter) {
-    // Behandle das Ende des Spiels oder die Kollision
-    leds[XY(Snake[0].first, Snake[0].second)] = CRGB::Red;
-    FastLED.show();
-    delay(300);
-    show_logo();
-    delay(3000);
-    // fill_rainbow_circular(leds, NUM_LEDS, 0);
-    // FastLED.show();
-    // delay(20000);
-     return;
+  static unsigned long lastMoveTime = 0;
+  unsigned long currentTime = millis();
+
+  if (currentTime - lastMoveTime >= 200) {
+    lastMoveTime = currentTime;
+    boolean weiter = move_snake();
+    if (!weiter) {
+      // Behandle das Ende des Spiels oder die Kollision
+      leds[XY(Snake[0].first, Snake[0].second)] = CRGB::Red;
+      FastLED.show();
+      delay(300);
+      show_logo();
+      delay(3000);
+      vy = 0;
+      vx = 1;
+      Snake = {{2, 3}, {1, 3}, {0, 3}};
+      return;
+    }
+    draw();
   }
-  draw();
-  delay(200);
+
+  button_left.loop();
+  button_right.loop();
 }
