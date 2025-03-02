@@ -32,11 +32,12 @@ Button2 button_right;
 
 int vx = 1;
 int vy = 0;
-
+bool demo = true;
 /////////////////////////////////////////////////////////////////
 
 void tap_left(Button2& btn) {
     //Serial.println("tap left");
+    demo = false;
     if (vy == 1) {
         vx = -1;
         vy = 0;
@@ -54,6 +55,7 @@ void tap_left(Button2& btn) {
 
 void tap_right(Button2& btn) {
     //Serial.println("tap right");
+    demo = false;
     if (vy == 1) {
         vx = 1;
         vy = 0;
@@ -280,7 +282,7 @@ void loop() {
 
   if (currentTime - lastMoveTime >= 200) {
     lastMoveTime = currentTime;
-    gameDemo();
+    if (demo) gameDemo();
     boolean weiter = move_snake();
     if (!weiter) {
       leds[XY(Snake[0].first, Snake[0].second)] = CRGB::Red;
@@ -300,6 +302,7 @@ void loop() {
       vy = 0;
       vx = 1;
       Snake = {{2, 3}, {1, 3}, {0, 3}};
+      demo = true;
       return;
     }
     draw();
