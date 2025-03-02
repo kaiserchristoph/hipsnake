@@ -109,6 +109,13 @@ uint16_t XY( uint8_t x, uint8_t y) {
 }
 
 
+bool isinSnake(int x, int y) {
+  for (std::pair<int, int> segment : Snake) {
+    if (segment.first == x && segment.second == y) return true;
+  }
+  return false;
+}
+
 boolean move_snake() {
   int x = Snake[0].first + vx;
   int y = Snake[0].second + vy;
@@ -126,13 +133,17 @@ boolean move_snake() {
   // Überprüfen, ob der Kopf auf das Food-Feld trifft
   if (head == Food) {
     // Neues Food-Feld generieren
+    do {
       int fx = random(0, kMatrixWidth);
       int fy = random(0, kMatrixHeight);
       Food = {fx, fy};
+    } while (isinSnake(Food.first, Food.second));
     } else
   Snake.pop_back();
   return true;
 }
+
+
 
 void draw() {
   FastLED.clear();
