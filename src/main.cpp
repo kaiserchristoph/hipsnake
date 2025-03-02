@@ -27,6 +27,9 @@ const bool    kMatrixVertical = false;
 #define LEFT_PIN 33 // GPIO21 pin connected to button
 #define RIGHT_PIN 32 // GPIO22 pin connected to button
 
+std::vector<std::pair<int, int>> Snake = {{2, 3}, {1, 3}, {0, 3}};
+std::pair<int, int> Food;
+
 Button2 button_left;
 Button2 button_right;
 
@@ -35,9 +38,25 @@ int vy = 0;
 bool demo = true;
 /////////////////////////////////////////////////////////////////
 
+//TODO: snake stops for 1 frame when collecting food
+
+void reset() {
+  FastLED.clear();
+  FastLED.show();
+  Snake = {{2, 3}, {1, 3}, {0, 3}};
+  vx = 1;
+  vy = 0;
+  Food = {8, 3};
+}
+
 void tap_left(Button2& btn) {
     //Serial.println("tap left");
-    demo = false;
+    if (demo==true)
+    {
+      demo = false;
+      reset();
+      return;
+    }
     if (vy == 1) {
         vx = -1;
         vy = 0;
@@ -55,7 +74,12 @@ void tap_left(Button2& btn) {
 
 void tap_right(Button2& btn) {
     //Serial.println("tap right");
-    demo = false;
+    if (demo==true)
+    {
+      demo = false;
+      reset();
+      return;
+    }
     if (vy == 1) {
         vx = 1;
         vy = 0;
@@ -73,8 +97,7 @@ void tap_right(Button2& btn) {
 
 /////////////////////////////////////////////////////////////////
 
-std::vector<std::pair<int, int>> Snake = {{2, 3}, {1, 3}, {0, 3}};
-std::pair<int, int> Food;
+
 
 
 
@@ -149,10 +172,11 @@ boolean move_snake() {
 
 void draw() {
   FastLED.clear();
+  leds[XY(Food.first, Food.second)] = CRGB::Red;
   for (std::pair<int, int> segment : Snake) {
     leds[XY(segment.first, segment.second)] = CRGB::Green;
   }
-  leds[XY(Food.first, Food.second)] = CRGB::Red;
+  
   FastLED.show();
 }
 
@@ -225,6 +249,8 @@ void drawString(String s, int xStart, int yStart, CRGB color) {
     drawChar(s[i], xStart + i * 4, yStart, color);
   }
 }
+
+
 
 void setup() {
   Serial.begin(115200);
