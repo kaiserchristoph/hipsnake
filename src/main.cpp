@@ -246,6 +246,22 @@ void setup() {
 
 //load json file
 
+void gameDemo() {
+  if (Food.first > Snake[0].first && vx != -1) {
+    vy = 0;
+    vx = 1;
+  } else if (Food.first < Snake[0].first && vx != 1) {
+    vy = 0;
+    vx = -1;
+  } else if (Food.second > Snake[0].second && vy != -1) {
+    vy = 1;
+    vx = 0;
+  } else if (Food.second < Snake[0].second && vy != 1) {
+    vy = -1;
+    vx = 0;
+  }
+
+}
 
 void loop() {
   static unsigned long lastMoveTime = 0;
@@ -253,13 +269,14 @@ void loop() {
 
   if (currentTime - lastMoveTime >= 200) {
     lastMoveTime = currentTime;
+    gameDemo();
     boolean weiter = move_snake();
     if (!weiter) {
       leds[XY(Snake[0].first, Snake[0].second)] = CRGB::Red;
       FastLED.show();
       delay(1000);
       FastLED.clear();
-      drawString("GAME", 0, 8, CRGB::Red);
+      drawString("GAME", 0, 9, CRGB::Red);
       drawString("OVER", 0, 2, CRGB::Red);
       FastLED.show();
       delay(4000);
