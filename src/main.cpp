@@ -9,11 +9,19 @@
 #include <SPIFFS.h>
 
 
-#define LED_PIN     25
+#define LED_PIN     16
 #define NUM_LEDS    256
 #define BRIGHTNESS  255
 #define LED_TYPE    WS2812
 #define COLOR_ORDER GRB
+
+#define LEFT_PIN 18
+#define RIGHT_PIN 19
+//#define UP_PIN 26
+//#define DOWN_PIN 19
+#define SELECT_PIN 27
+
+
 CRGB leds[NUM_LEDS];
 
 // Params for width and height
@@ -24,14 +32,16 @@ const uint8_t kMatrixHeight = 16;
 const bool    kMatrixSerpentineLayout = true;
 const bool    kMatrixVertical = false;
 
-#define LEFT_PIN 33 // GPIO21 pin connected to button
-#define RIGHT_PIN 32 // GPIO22 pin connected to button
+
 
 std::vector<std::pair<int, int>> Snake = {{2, 3}, {1, 3}, {0, 3}};
 std::pair<int, int> Food;
 
 Button2 button_left;
 Button2 button_right;
+//Button2 button_up;
+//Button2 button_down;
+Button2 button_select;
 
 int vx = 1;
 int vy = 0;
@@ -50,7 +60,7 @@ void reset() {
 }
 
 void tap_left(Button2& btn) {
-    //Serial.println("tap left");
+    Serial.println("tap left");
     if (demo==true)
     {
       demo = false;
@@ -73,7 +83,7 @@ void tap_left(Button2& btn) {
 }
 
 void tap_right(Button2& btn) {
-    //Serial.println("tap right");
+    Serial.println("tap right");
     if (demo==true)
     {
       demo = false;
@@ -93,6 +103,18 @@ void tap_right(Button2& btn) {
         vx = 0;
         vy = 1;
     }
+}
+
+void tap_up(Button2& btn) {
+    Serial.println("tap up");
+}
+
+void tap_down(Button2& btn) {
+    Serial.println("tap down");
+}
+
+void tap_select(Button2& btn) {
+    Serial.println("tap select");
 }
 
 /////////////////////////////////////////////////////////////////
@@ -260,18 +282,24 @@ void setup() {
   }
 
   button_left.begin(LEFT_PIN);
-
-  button_left.begin(LEFT_PIN);
   button_right.begin(RIGHT_PIN);
+  //button_up.begin(UP_PIN);
+  //button_down.begin(DOWN_PIN);
+  button_select.begin(SELECT_PIN);
 
   // setTapHandler() is called by any type of click, longpress or shortpress
   button_left.setTapHandler(tap_left);
   button_right.setTapHandler(tap_right);
+  //button_up.setTapHandler(tap_up);
+  //button_down.setTapHandler(tap_down);
+  button_select.setTapHandler(tap_select);
 
   FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
   FastLED.setBrightness(BRIGHTNESS);
   
   Food = {8, 3};
+
+  Serial.println("setup done");
 
   // Zeichne das Logo
   //show_logo();
@@ -336,4 +364,7 @@ void loop() {
 
   button_left.loop();
   button_right.loop();
+  //button_up.loop();
+  //button_down.loop();
+  button_select.loop();
 }
