@@ -282,7 +282,8 @@ void drawString(String s, int xStart, int yStart, CRGB color) {
 
 
 
-CRGB* myImage = nullptr;
+CRGB* offImage = nullptr;
+CRGB* onImage = nullptr;
 int imgW, imgH;
 /**
  * Lädt ein 24-bit BMP direkt in ein FastLED CRGB Array.
@@ -421,7 +422,8 @@ void setup() {
   //delay(10000);
   
   if (SPIFFS.begin()) {
-        myImage = loadBMPtoCRGB("/39c3pixel.bmp", &imgW, &imgH);
+        offImage = loadBMPtoCRGB("/39c3pixeloff.bmp", &imgW, &imgH);
+        onImage = loadBMPtoCRGB("/39c3pixelon.bmp", &imgW, &imgH);
         
     }
 
@@ -449,12 +451,12 @@ void loop() {
   if (currentTime - lastMoveTime >= 200) {
     lastMoveTime = currentTime;
       //drawCRGBArray(myImage, imgW, imgH);
-      drawDualColorArray(myImage, imgW, imgH, CRGB::Black , CRGB::White);
-      drawDualColorArray(myImage, imgW, imgH, CRGB::White, CRGB::Black);
-      drawDualColorArray(myImage, imgW, imgH, CRGB::Black , NeonGreen);
-      drawDualColorArray(myImage, imgW, imgH, NeonGreen, CRGB::Black);
-      drawDualColorArray(myImage, imgW, imgH, CRGB::Black , ElectricViolet);
-      drawDualColorArray(myImage, imgW, imgH, ElectricViolet , CRGB::Black);
+      drawDualColorArray(offImage, imgW, imgH, CRGB::White , CRGB::Black);
+      drawDualColorArray(onImage, imgW, imgH, CRGB::White, CRGB::Black);
+      drawDualColorArray(onImage, imgW, imgH, NeonGreen, CRGB::Black);
+      drawDualColorArray(offImage, imgW, imgH, NeonGreen , CRGB::Black);
+      drawDualColorArray(offImage, imgW, imgH, ElectricViolet , CRGB::Black);
+      drawDualColorArray(onImage, imgW, imgH, ElectricViolet , CRGB::Black);
  
       return;
     }
