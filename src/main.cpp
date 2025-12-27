@@ -9,9 +9,10 @@
 #include <SPIFFS.h>
 
 
-#define LED_PIN     16
+
+#define LED_PIN     17
 #define NUM_LEDS    256
-#define BRIGHTNESS  255
+#define BRIGHTNESS  15
 #define LED_TYPE    WS2812
 #define COLOR_ORDER GRB
 
@@ -20,6 +21,10 @@
 //#define UP_PIN 26
 //#define DOWN_PIN 19
 #define SELECT_PIN 27
+
+#define NeonGreen CRGB(0,255,0)
+#define ElectricViolet CRGB(150,115,255)
+#define Natural CRGB(250,245,245)
 
 
 CRGB leds[NUM_LEDS];
@@ -125,7 +130,9 @@ void tap_select(Button2& btn) {
 
 uint16_t XY( uint8_t x, uint8_t y) {
   uint16_t i;
-  
+  uint8_t temp = x;
+  x = y;
+  y = temp;
   if( kMatrixSerpentineLayout == false) {
     if (kMatrixVertical == false) {
       i = (y * kMatrixWidth) + x;
@@ -274,6 +281,114 @@ void drawString(String s, int xStart, int yStart, CRGB color) {
 
 
 
+
+CRGB* myImage = nullptr;
+int imgW, imgH;
+/**
+ * Lädt ein 24-bit BMP direkt in ein FastLED CRGB Array.
+ * @return Pointer auf CRGB Array (muss mit free() gelöscht werden)
+ */
+CRGB* loadBMPtoCRGB(const char* path, int* w, int* h) {
+    File file = SPIFFS.open(path, "r");
+    if (!file) return nullptr;
+
+    uint8_t header[54];
+    file.read(header, 54);
+
+    if (header[0] != 'B' || header[1] != 'M') {
+        file.close();
+        return nullptr;
+    }
+
+    *w = *(int32_t*)&header[18];
+    *h = *(int32_t*)&header[22];
+    uint32_t dataOffset = *(uint32_t*)&header[10];
+
+    // BMP Reihen-Größe inkl. Padding (4-Byte Alignment)
+    int rowSize = (*w * 3 + 3) & ~3; 
+    
+    // Speicher für das FastLED Array reservieren
+    CRGB* ledArray = (CRGB*) malloc((*w) * (*h) * sizeof(CRGB));
+    if (!ledArray) {
+        file.close();
+        return nullptr;
+    }
+
+    file.seek(dataOffset);
+    uint8_t* lineBuffer = (uint8_t*) malloc(rowSize);
+
+    for (int y = 0; y < *h; y++) {
+        file.read(lineBuffer, rowSize);
+        
+        // BMP ist Bottom-Up. Wir kehren es für die Matrix-Logik um.
+        int targetY = (*h - 1 - y);
+        
+        for (int x = 0; x < *w; x++) {
+            int srcIdx = x * 3;
+            int destIdx = targetY * (*w) + x;
+
+            // BMP (BGR) -> FastLED (RGB)
+            // CRGB erlaubt direkten Zugriff auf .r, .g, .b
+            ledArray[destIdx].r = lineBuffer[srcIdx + 2];
+            ledArray[destIdx].g = lineBuffer[srcIdx + 1];
+            ledArray[destIdx].b = lineBuffer[srcIdx];
+        }
+    }
+
+    free(lineBuffer);
+    file.close();
+    return ledArray;
+}
+
+
+// Einfacher Zugriff auf x/y Koordinaten
+void setPixel(CRGB* arr, int x, int y, int width, CRGB color) {
+    arr[y * width + x] = color;
+}
+
+CRGB getPixel(CRGB* arr, int x, int y, int width) {
+    return arr[y * width + x];
+}
+
+
+
+void drawCRGBArray(CRGB* arr, int width, int height) {
+  FastLED.clear();
+
+  
+  for (int offset = 0; offset < width - kMatrixWidth; offset++) {
+    for (int y = 0; y < kMatrixHeight; y++) {
+      for (int x = 0; x < kMatrixWidth; x++) {
+        leds[XY(x, y)] = getPixel(arr, x + offset, y, width);
+      }
+    }
+    FastLED.show();
+    delay(150);
+  }
+}
+
+
+
+void drawDualColorArray(CRGB* arr, int width, int height, CRGB whiteColor, CRGB blackColor) {
+  FastLED.clear();
+
+  for (int offset = 0; offset < width - kMatrixWidth; offset++) {
+    for (int y = 0; y < kMatrixHeight; y++) {
+      for (int x = 0; x < kMatrixWidth; x++) {
+        if (getPixel(arr, x + offset, y, width) == CRGB::White) {
+            leds[XY(x, y)] = whiteColor;
+        } else {
+            leds[XY(x, y)] = blackColor;
+        }
+      }
+    }
+    FastLED.show();
+    delay(150);
+  }
+}
+
+
+
 void setup() {
   Serial.begin(115200);
   if(!SPIFFS.begin(true)){
@@ -305,66 +420,42 @@ void setup() {
   //show_logo();
   //delay(10000);
   
+  if (SPIFFS.begin()) {
+        myImage = loadBMPtoCRGB("/39c3pixel.bmp", &imgW, &imgH);
+        
+    }
+
+
+
   // Zeichne die Schlange
-  draw();
+  //draw();
+  
 
 
 }
 
-//load json file
-
-void gameDemo() {
-  if (Food.first > Snake[0].first && vx != -1) {
-    vy = 0;
-    vx = 1;
-  } else if (Food.first < Snake[0].first && vx != 1) {
-    vy = 0;
-    vx = -1;
-  } else if (Food.second > Snake[0].second && vy != -1) {
-    vy = 1;
-    vx = 0;
-  } else if (Food.second < Snake[0].second && vy != 1) {
-    vy = -1;
-    vx = 0;
-  }
-
-}
 
 void loop() {
   static unsigned long lastMoveTime = 0;
   unsigned long currentTime = millis();
 
+    // if (myImage) {
+    //     Serial.println("Bild erfolgreich geladen!");
+    // }
+    // else {
+    //     Serial.println("Fehler beim Laden des Bildes!");
+    // }
+
   if (currentTime - lastMoveTime >= 200) {
     lastMoveTime = currentTime;
-    if (demo) gameDemo();
-    boolean weiter = move_snake();
-    if (!weiter) {
-      leds[XY(Snake[0].first, Snake[0].second)] = CRGB::Red;
-      FastLED.show();
-      delay(1000);
-      FastLED.clear();
-      drawString("GAME", 0, 9, CRGB::Red);
-      drawString("OVER", 0, 2, CRGB::Red);
-      FastLED.show();
-      delay(4000);
-      FastLED.clear();
-      drawString(String(Snake.size()-3)+"P", 1, 8, CRGB::Red);
-      FastLED.show();
-      delay(4000);
-      show_logo();
-      delay(3000);
-      vy = 0;
-      vx = 1;
-      Snake = {{2, 3}, {1, 3}, {0, 3}};
-      demo = true;
+      //drawCRGBArray(myImage, imgW, imgH);
+      drawDualColorArray(myImage, imgW, imgH, CRGB::Black , CRGB::White);
+      drawDualColorArray(myImage, imgW, imgH, CRGB::White, CRGB::Black);
+      drawDualColorArray(myImage, imgW, imgH, CRGB::Black , NeonGreen);
+      drawDualColorArray(myImage, imgW, imgH, NeonGreen, CRGB::Black);
+      drawDualColorArray(myImage, imgW, imgH, CRGB::Black , ElectricViolet);
+      drawDualColorArray(myImage, imgW, imgH, ElectricViolet , CRGB::Black);
+ 
       return;
     }
-    draw();
-  }
-
-  button_left.loop();
-  button_right.loop();
-  //button_up.loop();
-  //button_down.loop();
-  button_select.loop();
 }
