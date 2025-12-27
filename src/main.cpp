@@ -9,9 +9,10 @@
 #include <SPIFFS.h>
 
 
-#define LED_PIN     16
+
+#define LED_PIN     17
 #define NUM_LEDS    256
-#define BRIGHTNESS  255
+#define BRIGHTNESS  10
 #define LED_TYPE    WS2812
 #define COLOR_ORDER GRB
 
@@ -274,6 +275,79 @@ void drawString(String s, int xStart, int yStart, CRGB color) {
 
 
 
+
+CRGB* myImage = nullptr;
+int imgW, imgH;
+/**
+ * Lädt ein 24-bit BMP direkt in ein FastLED CRGB Array.
+ * @return Pointer auf CRGB Array (muss mit free() gelöscht werden)
+ */
+CRGB* loadBMPtoCRGB(const char* path, int* w, int* h) {
+    File file = SPIFFS.open(path, "r");
+    if (!file) return nullptr;
+
+    uint8_t header[54];
+    file.read(header, 54);
+
+    if (header[0] != 'B' || header[1] != 'M') {
+        file.close();
+        return nullptr;
+    }
+
+    *w = *(int32_t*)&header[18];
+    *h = *(int32_t*)&header[22];
+    uint32_t dataOffset = *(uint32_t*)&header[10];
+
+    // BMP Reihen-Größe inkl. Padding (4-Byte Alignment)
+    int rowSize = (*w * 3 + 3) & ~3; 
+    
+    // Speicher für das FastLED Array reservieren
+    CRGB* ledArray = (CRGB*) malloc((*w) * (*h) * sizeof(CRGB));
+    if (!ledArray) {
+        file.close();
+        return nullptr;
+    }
+
+    file.seek(dataOffset);
+    uint8_t* lineBuffer = (uint8_t*) malloc(rowSize);
+
+    for (int y = 0; y < *h; y++) {
+        file.read(lineBuffer, rowSize);
+        
+        // BMP ist Bottom-Up. Wir kehren es für die Matrix-Logik um.
+        int targetY = (*h - 1 - y);
+        
+        for (int x = 0; x < *w; x++) {
+            int srcIdx = x * 3;
+            int destIdx = targetY * (*w) + x;
+
+            // BMP (BGR) -> FastLED (RGB)
+            // CRGB erlaubt direkten Zugriff auf .r, .g, .b
+            ledArray[destIdx].r = lineBuffer[srcIdx + 2];
+            ledArray[destIdx].g = lineBuffer[srcIdx + 1];
+            ledArray[destIdx].b = lineBuffer[srcIdx];
+        }
+    }
+
+    free(lineBuffer);
+    file.close();
+    return ledArray;
+}
+
+
+// Einfacher Zugriff auf x/y Koordinaten
+void setPixel(CRGB* arr, int x, int y, int width, CRGB color) {
+    arr[y * width + x] = color;
+}
+
+CRGB getPixel(CRGB* arr, int x, int y, int width) {
+    return arr[y * width + x];
+}
+
+
+
+
+
 void setup() {
   Serial.begin(115200);
   if(!SPIFFS.begin(true)){
@@ -305,6 +379,14 @@ void setup() {
   //show_logo();
   //delay(10000);
   
+  if (SPIFFS.begin()) {
+        myImage = loadBMPtoCRGB("/39c3pixel.bmp", &imgW, &imgH);
+        
+    }
+
+
+
+
   // Zeichne die Schlange
   draw();
 
@@ -333,6 +415,13 @@ void gameDemo() {
 void loop() {
   static unsigned long lastMoveTime = 0;
   unsigned long currentTime = millis();
+
+    if (myImage) {
+        Serial.println("Bild erfolgreich geladen!");
+    }
+    else {
+        Serial.println("Fehler beim Laden des Bildes!");
+    }
 
   if (currentTime - lastMoveTime >= 200) {
     lastMoveTime = currentTime;
