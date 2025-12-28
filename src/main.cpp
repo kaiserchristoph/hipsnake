@@ -43,6 +43,7 @@ CRGB snakeColor = CRGB::Green;
 bool rainbow = false;
 int foodType = random(0, 10);
 
+
 Button2 button_left;
 Button2 button_right;
 //Button2 button_up;
@@ -62,10 +63,12 @@ bool demo = true;
 void reset() {
   FastLED.clear();
   FastLED.show();
+  snakeColor = CRGB::Green;
   Snake = {{2, 3}, {1, 3}, {0, 3}};
   vx = 1;
   vy = 0;
   Food = {8, 3};
+  foodType = random(0, 10);
 }
 
 void tap_left(Button2& btn) {
@@ -485,8 +488,9 @@ void loop() {
     if (demo) gameDemo();
     boolean weiter = move_snake();
     if (!weiter) {
-      leds[XY(Snake[0].first, Snake[0].second)] = CRGB::Red;
-      FastLED.show();
+      
+      snakeColor = CRGB::Red;
+      draw();
       delay(1000);
       FastLED.clear();
       drawString("GAME", 0, 9, CRGB::Red);
@@ -499,9 +503,10 @@ void loop() {
       delay(4000);
       show_logo();
       delay(3000);
-      vy = 0;
-      vx = 1;
-      Snake = {{2, 3}, {1, 3}, {0, 3}};
+      // vy = 0;
+      // vx = 1;
+      // Snake = {{2, 3}, {1, 3}, {0, 3}};
+      reset();
       demo = true;
       return;
     }
