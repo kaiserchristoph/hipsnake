@@ -10,7 +10,7 @@
 
 
 
-#define LED_PIN     17
+#define LED_PIN     16
 #define NUM_LEDS    256
 #define BRIGHTNESS  10
 #define LED_TYPE    WS2812
