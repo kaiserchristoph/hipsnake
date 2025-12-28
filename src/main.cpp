@@ -37,6 +37,8 @@ const bool    kMatrixVertical = false;
 
 std::vector<std::pair<int, int>> Snake = {{2, 3}, {1, 3}, {0, 3}};
 std::pair<int, int> Food;
+CRGB foodColor = CRGB::Red;
+int foodType = random(0, 10);
 
 Button2 button_left;
 Button2 button_right;
@@ -44,8 +46,11 @@ Button2 button_right;
 //Button2 button_down;
 Button2 button_select;
 
+bool direction_pressed = false;
+
 int vx = 1;
 int vy = 0;
+int frametime = 200; // Zeit zwischen den Bewegungen in Millisekunden
 bool demo = true;
 /////////////////////////////////////////////////////////////////
 
@@ -61,13 +66,17 @@ void reset() {
 }
 
 void tap_left(Button2& btn) {
-    Serial.println("tap left");
+    //Serial.println("tap left");
     if (demo==true)
     {
       demo = false;
       reset();
       return;
     }
+    //only change direction if not pressed yet
+    if (!direction_pressed) {
+      direction_pressed = true;
+     
     if (vy == 1) {
         vx = -1;
         vy = 0;
@@ -81,16 +90,19 @@ void tap_left(Button2& btn) {
         vx = 0;
         vy = -1;
     }
+  }
 }
 
 void tap_right(Button2& btn) {
-    Serial.println("tap right");
+    //Serial.println("tap right");
     if (demo==true)
     {
       demo = false;
       reset();
       return;
     }
+    if (!direction_pressed) {
+      direction_pressed = true;
     if (vy == 1) {
         vx = 1;
         vy = 0;
@@ -104,6 +116,7 @@ void tap_right(Button2& btn) {
         vx = 0;
         vy = 1;
     }
+  }
 }
 
 void tap_up(Button2& btn) {
@@ -184,7 +197,18 @@ boolean move_snake() {
     do {
       int fx = random(0, kMatrixWidth);
       int fy = random(0, kMatrixHeight);
+      if (foodType < 8) {
+        frametime = 200;
+      } else {
+        frametime = 150;
+      }
+      foodType = random(0, 10);
       Food = {fx, fy};
+      if (foodType < 8) {
+        foodColor = CRGB::Red;
+      } else {
+        foodColor = CRGB::Blue;
+      }
     } while (isinSnake(Food.first, Food.second));
     } else
   Snake.pop_back();
@@ -195,7 +219,8 @@ boolean move_snake() {
 
 void draw() {
   FastLED.clear();
-  leds[XY(Food.first, Food.second)] = CRGB::Red;
+  direction_pressed = false;
+  leds[XY(Food.first, Food.second)] = foodColor;
   for (std::pair<int, int> segment : Snake) {
     leds[XY(segment.first, segment.second)] = CRGB::Green;
   }
@@ -423,7 +448,7 @@ void loop() {
         Serial.println("Fehler beim Laden des Bildes!");
     }
 
-  if (currentTime - lastMoveTime >= 200) {
+  if (currentTime - lastMoveTime >= frametime) {
     lastMoveTime = currentTime;
     if (demo) gameDemo();
     boolean weiter = move_snake();
