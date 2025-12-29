@@ -285,6 +285,7 @@ void drawString(String s, int xStart, int yStart, CRGB color) {
 CRGB* offImage = nullptr;
 CRGB* onImage = nullptr;
 CRGB* yunimos = nullptr;
+CRGB* bubblebobble = nullptr;
 int imgW, imgH;
 
 /**
@@ -357,12 +358,23 @@ CRGB getPixel(CRGB* arr, int x, int y, int width) {
 
 void drawCRGBArray(CRGB* arr, int width, int height) {
   FastLED.clear();
-
-  
   for (int offset = 0; offset < width - kMatrixWidth; offset++) {
     for (int y = 0; y < kMatrixHeight; y++) {
       for (int x = 0; x < kMatrixWidth; x++) {
         leds[XY(x, y)] = getPixel(arr, x + offset, y, width);
+      }
+    }
+    FastLED.show();
+    delay(150);
+  }
+}
+
+void drawCRGBArrayLoop(CRGB* arr, int width, int height) {
+  FastLED.clear();
+  for (int offset = 0; ; offset = (offset + 1) % width) {
+    for (int x = 0; x < kMatrixWidth; x++) {
+      for (int y = 0; y < kMatrixHeight; y++) {
+        leds[XY(x%kMatrixWidth, y)] = getPixel(arr, (x + offset)%width, y, width);
       }
     }
     FastLED.show();
@@ -426,7 +438,8 @@ void setup() {
   if (SPIFFS.begin()) {
         //offImage = loadBMPtoCRGB("/39c3pixeloff.bmp", &imgW, &imgH);
         //onImage = loadBMPtoCRGB("/39c3pixelon.bmp", &imgW, &imgH);
-        yunimos = loadBMPtoCRGB("/yunimos.bmp", &imgW, &imgH);
+        //yunimos = loadBMPtoCRGB("/yunimos.bmp", &imgW, &imgH);
+        bubblebobble = loadBMPtoCRGB("/bubblebobble.bmp", &imgW, &imgH);
         
     }
 
@@ -460,7 +473,8 @@ void loop() {
       // drawDualColorArray(offImage, imgW, imgH, NeonGreen , CRGB::Black);
       // drawDualColorArray(offImage, imgW, imgH, ElectricViolet , CRGB::Black);
       // drawDualColorArray(onImage, imgW, imgH, ElectricViolet , CRGB::Black);
-      drawCRGBArray(yunimos, imgW, imgH);
+      //drawCRGBArrayLoop(yunimos, imgW, imgH);
+      drawCRGBArrayLoop(bubblebobble, imgW, imgH);
  
       return;
     }
