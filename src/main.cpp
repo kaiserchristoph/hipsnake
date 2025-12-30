@@ -378,7 +378,7 @@ void drawCRGBArrayLoop(CRGB* arr, int width, int height) {
       }
     }
     FastLED.show();
-    delay(150);
+    delay(100);
   }
 }
 
@@ -464,8 +464,8 @@ void loop() {
     //     Serial.println("Fehler beim Laden des Bildes!");
     // }
 
-  if (currentTime - lastMoveTime >= 200) {
-    lastMoveTime = currentTime;
+  //if (currentTime - lastMoveTime >= 150) {
+   // lastMoveTime = currentTime;
       //drawCRGBArray(myImage, imgW, imgH);
       // drawDualColorArray(offImage, imgW, imgH, CRGB::White , CRGB::Black);
       // drawDualColorArray(onImage, imgW, imgH, CRGB::White, CRGB::Black);
@@ -477,5 +477,5 @@ void loop() {
       drawCRGBArrayLoop(bubblebobble, imgW, imgH);
  
       return;
-    }
+    //}
 }
